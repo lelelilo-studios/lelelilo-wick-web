@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#070d18">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Lelelilo: Wick. A pillow with a cold wick relights the Lanterns of the Long Night: a little souls-like in pixel art, by candlelight. Plays in the browser, on computers and phones.">
+<meta name="author" content="lelelilo.com">
+<title>Lelelilo: Wick</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wick">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="lelelilo.com">
+<meta property="og:title" content="Lelelilo: Wick">
+<meta property="og:description" content="A pillow with a cold wick relights the Lanterns of the Long Night. A little souls-like in pixel art, by candlelight.">
+<meta property="og:url" content="https://lelelilo-studios.github.io/lelelilo-wick-web/">
+<meta property="og:image" content="https://lelelilo-studios.github.io/lelelilo-wick-web/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A cream pillow with a lit wick in its seam, in pixel art on midnight, and the name Lelelilo: Wick.">
+<meta name="twitter:card" content="summary_large_image">
+<script>
+  // The page's language, before anything is drawn: Spanish (es-419) when the browser's first language is Spanish,
+  // British English otherwise. What the player chose in the game (lelelilo_wick_lang), or ?lang=es|en, comes first.
+  (() => {
+    let lang = new URLSearchParams(location.search).get('lang') || '';
+    try { lang = lang || localStorage.getItem('lelelilo_wick_lang') || ''; } catch (e) {}
+    lang = lang || (navigator.languages && navigator.languages[0]) || navigator.language || 'en';
+    const es = /^es([-_]|$)/i.test(lang);
+    window.__lelelilo_lang = es ? 'es' : 'en';
+    document.documentElement.lang = es ? 'es-419' : 'en-GB';
+    if (es) document.title = 'Lelelilo: Mecha';
+  })();
+</script>
+<style>
+  :root { --night: #070d18; --gold: #ffc94a; --lumina: #e3b563; --cream: #fff4d6; --faint: rgba(255, 244, 214, .62); --red: #d8605a;
+    --round: ui-rounded, 'SF Pro Rounded', 'Segoe UI', system-ui, sans-serif; --px: 3px; }
+  /* One art pixel is a whole number of CSS pixels, so the pixel art stays crisp */
+  @media (min-width: 640px) and (min-height: 540px) { :root { --px: 4px; } }
+  @media (min-width: 1100px) and (min-height: 780px) { :root { --px: 5px; } }
+  @media (max-height: 330px), (max-width: 330px) { :root { --px: 2px; } }
+  html, body { margin: 0; height: 100%; background: var(--night); color: var(--cream); overflow: hidden; overscroll-behavior: none; }
+  body { font: 500 16px/1.45 var(--round); -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+    -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  svg, img, a { -webkit-touch-callout: none; -webkit-user-drag: none; }
+  .defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+  canvas#lelelilo { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; touch-action: none; outline: none; }
+  .screen { position: fixed; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; text-align: center;
+    background: var(--night); overflow: hidden auto; overscroll-behavior: contain; touch-action: pan-y; transition: opacity .5s ease;
+    scrollbar-width: thin; scrollbar-color: rgba(255, 244, 214, .2) transparent;
+    padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+  .screen.gone { opacity: 0; pointer-events: none; visibility: hidden; transition: opacity .5s ease, visibility 0s .5s; }
+  .screen.hidden { display: none; }
+  #loading { touch-action: none; overflow: hidden; }
+  /* The screen's words sit in the middle, the studio's link at its foot; a short screen scrolls */
+  .inner { margin: auto 0; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 8px 0; max-width: 100%; }
+  html[lang^="es"] .title[lang="en"], html:not([lang^="es"]) .title[lang="es"] { display: none; }
+  .title { display: block; --tpx: var(--px); width: calc(var(--w) * var(--tpx)); height: calc(var(--h) * var(--tpx)); }
+  @media (max-width: 480px) { .title { --tpx: 2px; } }
+  h1 { margin: 0; font-size: clamp(19px, 3.6vw, 26px); font-weight: 800; letter-spacing: .01em; line-height: 1.25; max-width: 24em; text-wrap: balance; }
+  p { margin: 0; max-width: 31em; color: var(--faint); text-wrap: pretty; }
+  b { color: var(--cream); }
+
+  /* ── Loading: an Unlit pillow; a match is struck, its wick catches, and the flame grows as the game arrives ── */
+  .scene { display: block; width: calc(39 * var(--px)); height: calc(45 * var(--px)); overflow: visible; --k: 0; }
+  .scene .glow { transform-box: fill-box; transform-origin: center; transform: scale(calc(.3 + .7 * var(--k))); opacity: 0; transition: transform .8s ease, opacity .8s ease; }
+  .scene.lit .glow { opacity: calc(.45 + .55 * var(--k)); }
+  .scene .dark { opacity: .8; transition: opacity .8s ease; }
+  .scene.lit .dark { opacity: calc(.62 - .56 * var(--k)); }
+  .scene .open, .scene .tip-lit, .scene .flame, .scene .moth { display: none; }
+  .scene.awake .open, .scene.lit .tip-lit { display: inline; }
+  .scene.awake .shut, .scene.lit .tip-cold { display: none; }
+  .scene.lit.s0 .f0, .scene.lit.s1 .f1, .scene.lit.s2 .f2, .scene.lit.s3 .f3 { display: inline; }
+  /* the flame flickers: three drawings shown in turn, never two at once */
+  .flame use { opacity: 0; animation: 1.3s step-end infinite; }
+  .flame .a { animation-name: flick-a; } .flame .b { animation-name: flick-b; } .flame .c { animation-name: flick-c; }
+  .f2 use { animation-duration: 1.1s; } .f0 use, .f1 use { animation-duration: .9s; }
+  @keyframes flick-a { 0% { opacity: 1; } 34% { opacity: 0; } 50% { opacity: 1; } 79% { opacity: 0; } }
+  @keyframes flick-b { 0% { opacity: 0; } 34% { opacity: 1; } 50% { opacity: 0; } }
+  @keyframes flick-c { 0% { opacity: 0; } 79% { opacity: 1; } }
+  /* the match: brought in, struck (sparks), held to the wick until it catches, shaken out */
+  .match { animation: match 2.6s both; }
+  .match .mflame { animation: match-flame 2.6s step-end both; }
+  @keyframes match {
+    0% { transform: translate(18px, -11px); opacity: 0; }
+    10% { transform: translate(15px, -9px); opacity: 1; }
+    21% { transform: translate(15px, -9px); animation-timing-function: steps(3, end); }
+    26% { transform: translate(12px, -6px); animation-timing-function: ease-in-out; }
+    45%, 60% { transform: translate(13px, -1px); animation-timing-function: ease-in; }
+    78% { transform: translate(17px, -6px); opacity: 1; }
+    92%, 100% { transform: translate(18px, -7px); opacity: 0; }
+  }
+  @keyframes match-flame { 0% { opacity: 0; } 25% { opacity: 1; } 72% { opacity: 0; } }
+  .spark { opacity: 0; animation: 2.6s ease-out both; }
+  .spark.one { animation-name: spark-one; } .spark.two { animation-name: spark-two; } .spark.three { animation-name: spark-three; }
+  @keyframes spark-one { 0%, 24% { opacity: 0; transform: translate(12px, -5px); } 25% { opacity: 1; } 36%, 100% { opacity: 0; transform: translate(9px, -8px); } }
+  @keyframes spark-two { 0%, 24% { opacity: 0; transform: translate(13px, -5px); } 25% { opacity: 1; } 34%, 100% { opacity: 0; transform: translate(16px, -9px); } }
+  @keyframes spark-three { 0%, 25% { opacity: 0; transform: translate(12px, -4px); } 26% { opacity: 1; } 38%, 100% { opacity: 0; transform: translate(10px, -1px); } }
+  .smoke { opacity: 0; animation: 2.6s linear both; }
+  .smoke.one { animation-name: smoke-one; } .smoke.two { animation-name: smoke-two; }
+  @keyframes smoke-one { 0%, 72% { opacity: 0; transform: translate(16px, -7px); } 74% { opacity: .9; } 100% { opacity: 0; transform: translate(17px, -14px); } }
+  @keyframes smoke-two { 0%, 76% { opacity: 0; transform: translate(17px, -8px); } 78% { opacity: .7; } 100% { opacity: 0; transform: translate(16px, -15px); } }
+  /* once the flame is full, a wool moth comes to circle it */
+  .scene.lit.s3 .moth { display: inline; animation: moth-in 1.2s ease-out both; }
+  .moth .path { animation: orbit 3.6s linear infinite; }
+  .moth use { animation: .32s step-end infinite; }
+  .moth .up { animation-name: wing-up; } .moth .down { animation-name: wing-down; }
+  @keyframes moth-in { from { opacity: 0; } }
+  @keyframes wing-up { 0% { opacity: 1; } 50% { opacity: 0; } }
+  @keyframes wing-down { 0% { opacity: 0; } 50% { opacity: 1; } }
+  @keyframes orbit {
+    0%, 100% { transform: translate(20px, -7px); } 12.5% { transform: translate(18px, -10px); } 25% { transform: translate(11px, -12px); }
+    37.5% { transform: translate(5px, -10px); } 50% { transform: translate(3px, -7px); } 62.5% { transform: translate(5px, -4px); }
+    75% { transform: translate(11px, -2px); } 87.5% { transform: translate(18px, -4px); }
+  }
+  .status { font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); min-height: 1.45em; }
+
+  /* ── The other screens ── */
+  .mini { display: block; width: calc(39 * min(var(--px), 3px)); height: calc(33 * min(var(--px), 3px)); overflow: visible; }
+  .mini .dark { opacity: .55; }
+  .mini .smoke { animation: rise 2.8s linear infinite; opacity: 0; }
+  .mini .smoke.two { animation-delay: 1.4s; }
+  @keyframes rise { 0% { opacity: 0; transform: translate(12px, -2px); } 15% { opacity: .9; } 100% { opacity: 0; transform: translate(13px, -10px); } }
+  .browsers { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 34em; }
+  .browsers a, .again { color: var(--cream); text-decoration: none; padding: 11px 16px; border-radius: 4px; font-weight: 700; font-size: 15px;
+    border: 1.5px solid rgba(255, 201, 74, .55); background: rgba(255, 201, 74, .06); touch-action: manipulation; }
+  .browsers a small { color: var(--faint); font-weight: 600; }
+  .browsers a:hover { background: rgba(255, 201, 74, .14); }
+  .again { color: var(--night); background: var(--gold); border-color: var(--gold); font-weight: 800; box-shadow: 0 3px 0 #92612b; }
+  .again:active { transform: translateY(2px); box-shadow: 0 1px 0 #92612b; }
+  a:focus-visible { outline: 2px dashed var(--cream); outline-offset: 4px; }
+  .why { font-size: 13px; opacity: .85; }
+  .why:empty { display: none; }
+  .err { font: 500 12px/1.5 ui-monospace, monospace; color: #f0a39b; white-space: pre-wrap; text-align: left; max-width: min(90vw, 760px); max-height: 26vh;
+    overflow: auto; padding: 10px 12px; border: 1.5px dashed rgba(216, 96, 90, .7); user-select: text; -webkit-user-select: text; }
+  .err:empty { display: none; }
+  .help { max-width: 32em; text-align: left; padding: 12px 16px; border: 1.5px dashed rgba(255, 244, 214, .28); font-size: 14px; color: var(--faint); }
+  .help.hidden { display: none; }
+  .help ol { margin: 6px 0 0; padding-left: 20px; }
+  code { font: 600 13px ui-monospace, monospace; color: var(--cream); }
+  /* The studio's page, at the foot of every screen before the game */
+  .studio { flex: none; padding: 12px 16px; font-size: 13px; font-weight: 800; letter-spacing: .08em; color: var(--faint); text-decoration: none; }
+  .studio span { color: var(--gold); }
+  .studio:hover { color: var(--cream); }
+  @media (max-height: 430px) {
+    .inner { gap: 10px; }
+    #unsupported .mini, #failed .mini { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .screen, .screen.gone, .scene .glow, .scene .dark { transition: none; }
+    .match, .spark, .smoke, .moth { display: none !important; }
+    .flame use { animation: none; } .flame .a { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<!-- page-art -->
+<svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <g id="wk-pillow"><path fill="#b9a183" d="M0 0h2v1h-2zM23 0h2v1h-2zM0 1h1v1h-1zM2 1h2v1h-2zM21 1h2v1h-2zM24 1h1v1h-1zM0 2h1v1h-1zM4 2h3v1h-3zM18 2h3v1h-3zM24 2h1v1h-1zM0 3h1v1h-1zM7 3h11v1h-11zM24 3h1v1h-1zM0 4h1v1h-1zM3 4h2v1h-2zM20 4h2v1h-2zM24 4h1v1h-1zM1 5h1v1h-1zM4 5h1v1h-1zM6 5h2v1h-2zM9 5h2v1h-2zM12 5h2v1h-2zM15 5h2v1h-2zM18 5h2v1h-2zM23 5h1v1h-1zM1 6h1v1h-1zM3 6h1v1h-1zM21 6h1v1h-1zM23 6h1v1h-1zM2 15h1v1h-1zM4 15h7v1h-7zM14 15h7v1h-7zM22 15h1v1h-1zM2 16h1v1h-1zM4 16h17v1h-17zM22 16h1v1h-1zM2 17h21v1h-21zM2 18h1v1h-1zM5 18h1v1h-1zM8 18h1v1h-1zM11 18h1v1h-1zM14 18h1v1h-1zM17 18h1v1h-1zM20 18h1v1h-1zM22 18h1v1h-1zM2 19h1v1h-1zM5 19h15v1h-15zM22 19h1v1h-1zM2 20h5v1h-5zM18 20h5v1h-5zM2 21h2v1h-2zM21 21h2v1h-2z"/><path fill="#e4d3b0" d="M1 1h1v1h-1zM23 1h1v1h-1zM1 2h1v1h-1zM23 2h1v1h-1zM1 3h1v1h-1zM23 3h1v1h-1zM1 4h1v1h-1zM23 4h1v1h-1zM2 7h1v1h-1zM4 7h17v1h-17zM22 7h1v1h-1zM2 8h21v1h-21zM2 9h1v1h-1zM4 9h17v1h-17zM22 9h1v1h-1zM2 10h1v1h-1zM4 10h17v1h-17zM22 10h1v1h-1zM2 11h21v1h-21zM2 12h1v1h-1zM4 12h17v1h-17zM22 12h1v1h-1zM2 13h1v1h-1zM4 13h1v1h-1zM7 13h11v1h-11zM20 13h1v1h-1zM22 13h1v1h-1zM2 14h8v1h-8zM11 14h3v1h-3zM15 14h8v1h-8z"/><path fill="#fbf1db" d="M2 2h2v1h-2zM21 2h2v1h-2zM2 3h5v1h-5zM18 3h5v1h-5zM2 4h1v1h-1zM5 4h15v1h-15zM22 4h1v1h-1zM2 5h2v1h-2zM5 5h1v1h-1zM8 5h1v1h-1zM11 5h1v1h-1zM14 5h1v1h-1zM17 5h1v1h-1zM20 5h3v1h-3zM2 6h1v1h-1zM4 6h17v1h-17zM22 6h1v1h-1z"/><path fill="#7d6758" d="M1 7h1v1h-1zM3 7h1v1h-1zM21 7h1v1h-1zM23 7h1v1h-1zM1 8h1v1h-1zM23 8h1v1h-1zM1 9h1v1h-1zM3 9h1v1h-1zM21 9h1v1h-1zM23 9h1v1h-1zM1 10h1v1h-1zM3 10h1v1h-1zM21 10h1v1h-1zM23 10h1v1h-1zM1 11h1v1h-1zM23 11h1v1h-1zM1 12h1v1h-1zM3 12h1v1h-1zM21 12h1v1h-1zM23 12h1v1h-1zM1 13h1v1h-1zM3 13h1v1h-1zM21 13h1v1h-1zM23 13h1v1h-1zM1 14h1v1h-1zM23 14h1v1h-1zM1 19h1v1h-1zM23 19h1v1h-1zM1 20h1v1h-1zM23 20h1v1h-1zM1 21h1v1h-1zM23 21h1v1h-1zM1 22h1v1h-1zM23 22h1v1h-1z"/><path fill="#e97f86" d="M5 13h2v1h-2zM18 13h2v1h-2z"/><path fill="#2a1a14" d="M10 14h1v1h-1zM14 14h1v1h-1zM11 15h3v1h-3z"/><path fill="#3e3038" d="M1 15h1v1h-1zM3 15h1v1h-1zM21 15h1v1h-1zM23 15h1v1h-1zM1 16h1v1h-1zM3 16h1v1h-1zM21 16h1v1h-1zM23 16h1v1h-1zM1 17h1v1h-1zM23 17h1v1h-1zM1 18h1v1h-1zM3 18h2v1h-2zM6 18h2v1h-2zM9 18h2v1h-2zM12 18h2v1h-2zM15 18h2v1h-2zM18 18h2v1h-2zM21 18h1v1h-1zM23 18h1v1h-1zM0 19h1v1h-1zM3 19h2v1h-2zM20 19h2v1h-2zM0 20h1v1h-1zM7 20h11v1h-11zM24 20h1v1h-1zM0 21h1v1h-1zM4 21h3v1h-3zM18 21h3v1h-3zM24 21h1v1h-1zM0 22h1v1h-1zM2 22h2v1h-2zM21 22h2v1h-2zM24 22h1v1h-1zM0 23h2v1h-2zM23 23h2v1h-2z"/><path fill="#d93a33" d="M24 17h2v1h-2zM24 18h1v1h-1zM26 18h1v1h-1zM24 19h3v1h-3z"/><path fill="#f7ecdc" d="M25 18h1v1h-1z"/><path fill="#9c1f22" d="M25 20h2v1h-2z"/><path fill="#dccaa6" d="M-5 10h3v1h-3zM27 10h3v1h-3zM-6 11h2v1h-2zM-3 11h2v1h-2zM26 11h2v1h-2zM29 11h2v1h-2zM-4 12h1v1h-1zM28 12h1v1h-1z"/><path fill="#f6ead0" d="M-4 11h1v1h-1zM28 11h1v1h-1z"/><path fill="#b39a7b" d="M-6 12h2v1h-2zM-3 12h2v1h-2zM26 12h2v1h-2zM29 12h2v1h-2z"/><path fill="#76604f" d="M-5 13h3v1h-3zM27 13h3v1h-3z"/><path fill="#9c8468" d="M5 24h4v1h-4zM16 24h4v1h-4zM4 25h2v1h-2zM8 25h2v1h-2zM15 25h2v1h-2zM19 25h2v1h-2zM6 26h2v1h-2zM17 26h2v1h-2z"/><path fill="#c9b48f" d="M6 25h2v1h-2zM17 25h2v1h-2z"/><path fill="#634e43" d="M4 26h2v1h-2zM8 26h2v1h-2zM15 26h2v1h-2zM19 26h2v1h-2zM5 27h4v1h-4zM16 27h4v1h-4z"/><path fill="#a99d86" d="M12 1h1v1h-1z"/><path fill="#5b5046" d="M12 2h1v1h-1z"/></g>
+    <g id="wk-dark"><path fill="#070d18" d="M0 0h2v1h-2zM12 0h1v1h-1zM23 0h2v1h-2zM0 1h4v1h-4zM12 1h1v1h-1zM21 1h4v1h-4zM0 2h7v1h-7zM12 2h1v1h-1zM18 2h7v1h-7zM0 3h25v1h-25zM0 4h25v1h-25zM1 5h23v1h-23zM1 6h23v1h-23zM1 7h23v1h-23zM1 8h23v1h-23zM1 9h23v1h-23zM-5 10h3v1h-3zM1 10h23v1h-23zM27 10h3v1h-3zM-6 11h5v1h-5zM1 11h23v1h-23zM26 11h5v1h-5zM-6 12h5v1h-5zM1 12h23v1h-23zM26 12h5v1h-5zM-5 13h3v1h-3zM1 13h23v1h-23zM27 13h3v1h-3zM1 14h23v1h-23zM1 15h23v1h-23zM1 16h23v1h-23zM1 17h25v1h-25zM1 18h26v1h-26zM0 19h27v1h-27zM0 20h27v1h-27zM0 21h7v1h-7zM18 21h7v1h-7zM0 22h4v1h-4zM21 22h4v1h-4zM0 23h2v1h-2zM23 23h2v1h-2zM5 24h4v1h-4zM16 24h4v1h-4zM4 25h6v1h-6zM15 25h6v1h-6zM4 26h6v1h-6zM15 26h6v1h-6zM5 27h4v1h-4zM16 27h4v1h-4z"/></g>
+    <g id="wk-eyes-open"><path fill="#ffffff" d="M7 10h1v1h-1zM16 10h1v1h-1z"/><path fill="#15110f" d="M8 10h1v1h-1zM17 10h1v1h-1zM7 11h2v1h-2zM16 11h2v1h-2zM7 12h1v1h-1zM16 12h1v1h-1z"/><path fill="#33405e" d="M8 12h1v1h-1zM17 12h1v1h-1z"/></g>
+    <g id="wk-eyes-shut"><path fill="#15110f" d="M7 12h2v1h-2zM16 12h2v1h-2z"/></g>
+    <g id="wk-tip-cold"><path fill="#e6dcc4" d="M12 0h1v1h-1z"/></g>
+    <g id="wk-tip-lit"><path fill="#1d1714" d="M12 0h1v1h-1z"/></g>
+    <g id="wk-f0a"><path fill="#c4581c" d="M12 -3h1v1h-1z"/><path fill="#ffc94a" d="M12 -2h1v1h-1zM11 -1h1v1h-1zM13 -1h1v1h-1z"/><path fill="#ffe9a0" d="M12 -1h1v1h-1z"/></g>
+    <g id="wk-f0b"><path fill="#c4581c" d="M12 -3h1v1h-1z"/><path fill="#ffc94a" d="M12 -2h1v1h-1zM11 -1h1v1h-1zM13 -1h1v1h-1z"/><path fill="#ffe9a0" d="M12 -1h1v1h-1z"/></g>
+    <g id="wk-f0c"><path fill="#c4581c" d="M12 -3h1v1h-1z"/><path fill="#ffc94a" d="M12 -2h1v1h-1zM11 -1h1v1h-1zM13 -1h1v1h-1z"/><path fill="#ffe9a0" d="M12 -1h1v1h-1z"/></g>
+    <g id="wk-f1a"><path fill="#c4581c" d="M12 -5h1v1h-1zM11 -3h1v1h-1zM13 -3h1v1h-1z"/><path fill="#ffc94a" d="M12 -4h1v1h-1zM12 -3h1v1h-1zM11 -2h1v1h-1zM13 -2h1v1h-1zM12 -1h1v1h-1z"/><path fill="#ffe9a0" d="M12 -2h1v1h-1z"/></g>
+    <g id="wk-f1b"><path fill="#c4581c" d="M11 -5h1v1h-1zM11 -3h1v1h-1zM13 -3h1v1h-1z"/><path fill="#ffc94a" d="M12 -4h1v1h-1zM12 -3h1v1h-1zM11 -2h1v1h-1zM13 -2h1v1h-1zM12 -1h1v1h-1z"/><path fill="#ffe9a0" d="M12 -2h1v1h-1z"/></g>
+    <g id="wk-f1c"><path fill="#c4581c" d="M13 -5h1v1h-1zM11 -3h1v1h-1zM13 -3h1v1h-1z"/><path fill="#ffc94a" d="M12 -4h1v1h-1zM12 -3h1v1h-1zM11 -2h1v1h-1zM13 -2h1v1h-1zM12 -1h1v1h-1z"/><path fill="#ffe9a0" d="M12 -2h1v1h-1z"/></g>
+    <g id="wk-f2a"><path fill="#c4581c" d="M12 -9h1v1h-1zM11 -6h1v1h-1zM13 -6h1v1h-1zM10 -4h1v1h-1zM14 -4h1v1h-1z"/><path fill="#ffc94a" d="M12 -8h1v1h-1zM12 -7h1v1h-1zM12 -6h1v1h-1zM11 -5h3v1h-3zM11 -4h1v1h-1zM13 -4h1v1h-1zM10 -3h1v1h-1zM14 -3h1v1h-1zM10 -2h1v1h-1zM14 -2h1v1h-1zM11 -1h3v1h-3z"/><path fill="#ffe9a0" d="M12 -4h1v1h-1zM11 -3h1v1h-1zM13 -3h1v1h-1zM11 -2h1v1h-1zM13 -2h1v1h-1z"/><path fill="#fffbea" d="M12 -3h1v1h-1zM12 -2h1v1h-1z"/></g>
+    <g id="wk-f2b"><path fill="#c4581c" d="M11 -9h1v1h-1zM11 -6h1v1h-1zM13 -6h1v1h-1zM10 -4h1v1h-1zM14 -4h1v1h-1z"/><path fill="#ffc94a" d="M11 -8h1v1h-1zM11 -7h1v1h-1zM12 -6h1v1h-1zM11 -5h3v1h-3zM11 -4h1v1h-1zM13 -4h1v1h-1zM10 -3h1v1h-1zM14 -3h1v1h-1zM10 -2h1v1h-1zM14 -2h1v1h-1zM11 -1h3v1h-3z"/><path fill="#ffe9a0" d="M12 -4h1v1h-1zM11 -3h1v1h-1zM13 -3h1v1h-1zM11 -2h1v1h-1zM13 -2h1v1h-1z"/><path fill="#fffbea" d="M12 -3h1v1h-1zM12 -2h1v1h-1z"/></g>
+    <g id="wk-f2c"><path fill="#c4581c" d="M13 -9h1v1h-1zM11 -6h1v1h-1zM13 -6h1v1h-1zM10 -4h1v1h-1zM14 -4h1v1h-1z"/><path fill="#ffc94a" d="M13 -8h1v1h-1zM13 -7h1v1h-1zM12 -6h1v1h-1zM11 -5h3v1h-3zM11 -4h1v1h-1zM13 -4h1v1h-1zM10 -3h1v1h-1zM14 -3h1v1h-1zM10 -2h1v1h-1zM14 -2h1v1h-1zM11 -1h3v1h-3z"/><path fill="#ffe9a0" d="M12 -4h1v1h-1zM11 -3h1v1h-1zM13 -3h1v1h-1zM11 -2h1v1h-1zM13 -2h1v1h-1z"/><path fill="#fffbea" d="M12 -3h1v1h-1zM12 -2h1v1h-1z"/></g>
+    <g id="wk-f3a"><path fill="#c4581c" d="M12 -12h1v1h-1zM11 -9h1v1h-1zM13 -9h1v1h-1zM10 -7h1v1h-1zM14 -7h1v1h-1zM9 -5h1v1h-1zM15 -5h1v1h-1z"/><path fill="#ffc94a" d="M12 -11h1v1h-1zM12 -10h1v1h-1zM12 -9h1v1h-1zM11 -8h3v1h-3zM11 -7h3v1h-3zM10 -6h2v1h-2zM13 -6h2v1h-2zM10 -5h2v1h-2zM13 -5h2v1h-2zM9 -4h2v1h-2zM14 -4h2v1h-2zM9 -3h2v1h-2zM14 -3h2v1h-2zM10 -2h1v1h-1zM14 -2h1v1h-1zM11 -1h3v1h-3z"/><path fill="#ffe9a0" d="M12 -6h1v1h-1zM12 -5h1v1h-1zM11 -4h1v1h-1zM13 -4h1v1h-1zM11 -3h1v1h-1zM13 -3h1v1h-1zM11 -2h1v1h-1zM13 -2h1v1h-1z"/><path fill="#fffbea" d="M12 -4h1v1h-1zM12 -3h1v1h-1zM12 -2h1v1h-1z"/></g>
+    <g id="wk-f3b"><path fill="#c4581c" d="M11 -12h1v1h-1zM11 -9h1v1h-1zM13 -9h1v1h-1zM10 -7h1v1h-1zM14 -7h1v1h-1zM9 -5h1v1h-1zM15 -5h1v1h-1z"/><path fill="#ffc94a" d="M11 -11h1v1h-1zM11 -10h1v1h-1zM12 -9h1v1h-1zM11 -8h3v1h-3zM11 -7h3v1h-3zM10 -6h2v1h-2zM13 -6h2v1h-2zM10 -5h2v1h-2zM13 -5h2v1h-2zM9 -4h2v1h-2zM14 -4h2v1h-2zM9 -3h2v1h-2zM14 -3h2v1h-2zM10 -2h1v1h-1zM14 -2h1v1h-1zM11 -1h3v1h-3z"/><path fill="#ffe9a0" d="M12 -6h1v1h-1zM12 -5h1v1h-1zM11 -4h1v1h-1zM13 -4h1v1h-1zM11 -3h1v1h-1zM13 -3h1v1h-1zM11 -2h1v1h-1zM13 -2h1v1h-1z"/><path fill="#fffbea" d="M12 -4h1v1h-1zM12 -3h1v1h-1zM12 -2h1v1h-1z"/></g>
+    <g id="wk-f3c"><path fill="#c4581c" d="M13 -12h1v1h-1zM11 -9h1v1h-1zM13 -9h1v1h-1zM10 -7h1v1h-1zM14 -7h1v1h-1zM9 -5h1v1h-1zM15 -5h1v1h-1z"/><path fill="#ffc94a" d="M13 -11h1v1h-1zM13 -10h1v1h-1zM12 -9h1v1h-1zM11 -8h3v1h-3zM11 -7h3v1h-3zM10 -6h2v1h-2zM13 -6h2v1h-2zM10 -5h2v1h-2zM13 -5h2v1h-2zM9 -4h2v1h-2zM14 -4h2v1h-2zM9 -3h2v1h-2zM14 -3h2v1h-2zM10 -2h1v1h-1zM14 -2h1v1h-1zM11 -1h3v1h-3z"/><path fill="#ffe9a0" d="M12 -6h1v1h-1zM12 -5h1v1h-1zM11 -4h1v1h-1zM13 -4h1v1h-1zM11 -3h1v1h-1zM13 -3h1v1h-1zM11 -2h1v1h-1zM13 -2h1v1h-1z"/><path fill="#fffbea" d="M12 -4h1v1h-1zM12 -3h1v1h-1zM12 -2h1v1h-1z"/></g>
+    <g id="wk-match"><path fill="#d93a33" d="M0 0h1v1h-1z"/><path fill="#9c1f22" d="M1 0h1v1h-1zM0 1h2v1h-2z"/><path fill="#c9a24a" d="M2 2h1v1h-1zM3 3h1v1h-1zM4 4h1v1h-1zM5 5h1v1h-1zM6 6h1v1h-1z"/><path fill="#7a5a22" d="M7 7h1v1h-1zM8 8h1v1h-1z"/></g>
+    <g id="wk-match-flame"><path fill="#c4581c" d="M1 -5h1v1h-1zM0 -3h1v1h-1zM2 -3h1v1h-1z"/><path fill="#ffc94a" d="M1 -4h1v1h-1zM1 -3h1v1h-1zM0 -2h1v1h-1zM2 -2h1v1h-1zM1 -1h1v1h-1z"/><path fill="#ffe9a0" d="M1 -2h1v1h-1z"/></g>
+    <g id="wk-spark"><path fill="#ffe9a0" d="M0 0h1v1h-1z"/></g>
+    <g id="wk-moth-a"><path fill="#d6dde0" d="M0 0h1v1h-1zM2 0h1v1h-1z"/><path fill="#5a6a78" d="M1 1h1v1h-1z"/></g>
+    <g id="wk-moth-b"><path fill="#5a6a78" d="M1 0h1v1h-1z"/><path fill="#d6dde0" d="M0 1h1v1h-1zM2 1h1v1h-1z"/></g>
+    <path id="wk-smoke" fill="#4a5266" d="M0 0h1v1h-1z"/>
+    <g id="wk-title-en"><g transform="translate(0 1)" opacity=".85"><path fill="#1b1006" d="M0 0h4v1h-4zM87 0h4v1h-4zM98 0h3v1h-3zM1 1h2v1h-2zM88 1h2v1h-2zM99 1h1v1h-1zM1 2h2v1h-2zM88 2h2v1h-2zM99 2h1v1h-1zM1 3h2v1h-2zM11 3h8v1h-8zM21 3h4v1h-4zM31 3h8v1h-8zM41 3h4v1h-4zM51 3h4v1h-4zM57 3h4v1h-4zM69 3h5v1h-5zM89 3h2v1h-2zM94 3h2v1h-2zM99 3h1v1h-1zM102 3h4v1h-4zM110 3h5v1h-5zM118 3h4v1h-4zM123 3h3v1h-3zM1 4h2v1h-2zM12 4h2v1h-2zM18 4h1v1h-1zM22 4h2v1h-2zM32 4h2v1h-2zM38 4h1v1h-1zM42 4h2v1h-2zM52 4h2v1h-2zM58 4h2v1h-2zM68 4h2v1h-2zM73 4h2v1h-2zM79 4h1v1h-1zM89 4h2v1h-2zM93 4h3v1h-3zM99 4h1v1h-1zM103 4h2v1h-2zM109 4h2v1h-2zM114 4h2v1h-2zM119 4h2v1h-2zM124 4h1v1h-1zM1 5h2v1h-2zM12 5h2v1h-2zM22 5h2v1h-2zM32 5h2v1h-2zM42 5h2v1h-2zM52 5h2v1h-2zM58 5h2v1h-2zM67 5h2v1h-2zM74 5h2v1h-2zM78 5h2v1h-2zM89 5h2v1h-2zM93 5h1v1h-1zM95 5h2v1h-2zM99 5h1v1h-1zM103 5h2v1h-2zM108 5h2v1h-2zM115 5h1v1h-1zM119 5h2v1h-2zM123 5h1v1h-1zM1 6h2v1h-2zM12 6h2v1h-2zM16 6h1v1h-1zM22 6h2v1h-2zM32 6h2v1h-2zM36 6h1v1h-1zM42 6h2v1h-2zM52 6h2v1h-2zM58 6h2v1h-2zM67 6h2v1h-2zM74 6h2v1h-2zM78 6h2v1h-2zM90 6h2v1h-2zM93 6h1v1h-1zM95 6h2v1h-2zM98 6h1v1h-1zM103 6h2v1h-2zM108 6h2v1h-2zM119 6h2v1h-2zM122 6h1v1h-1zM1 7h2v1h-2zM12 7h5v1h-5zM22 7h2v1h-2zM32 7h5v1h-5zM42 7h2v1h-2zM52 7h2v1h-2zM58 7h2v1h-2zM67 7h2v1h-2zM74 7h2v1h-2zM90 7h2v1h-2zM93 7h1v1h-1zM95 7h2v1h-2zM98 7h1v1h-1zM103 7h2v1h-2zM108 7h2v1h-2zM119 7h4v1h-4zM1 8h2v1h-2zM12 8h2v1h-2zM16 8h1v1h-1zM22 8h2v1h-2zM32 8h2v1h-2zM36 8h1v1h-1zM42 8h2v1h-2zM52 8h2v1h-2zM58 8h2v1h-2zM67 8h2v1h-2zM74 8h2v1h-2zM90 8h4v1h-4zM96 8h3v1h-3zM103 8h2v1h-2zM108 8h2v1h-2zM119 8h2v1h-2zM122 8h2v1h-2zM1 9h2v1h-2zM12 9h2v1h-2zM22 9h2v1h-2zM32 9h2v1h-2zM42 9h2v1h-2zM52 9h2v1h-2zM58 9h2v1h-2zM67 9h2v1h-2zM74 9h2v1h-2zM79 9h1v1h-1zM91 9h2v1h-2zM96 9h3v1h-3zM103 9h2v1h-2zM108 9h2v1h-2zM115 9h1v1h-1zM119 9h2v1h-2zM123 9h2v1h-2zM1 10h2v1h-2zM8 10h1v1h-1zM12 10h2v1h-2zM18 10h1v1h-1zM22 10h2v1h-2zM28 10h1v1h-1zM32 10h2v1h-2zM38 10h1v1h-1zM42 10h2v1h-2zM48 10h1v1h-1zM52 10h2v1h-2zM58 10h2v1h-2zM64 10h1v1h-1zM68 10h2v1h-2zM73 10h2v1h-2zM78 10h2v1h-2zM91 10h2v1h-2zM96 10h3v1h-3zM103 10h2v1h-2zM109 10h2v1h-2zM114 10h2v1h-2zM119 10h2v1h-2zM124 10h2v1h-2zM0 11h9v1h-9zM11 11h8v1h-8zM21 11h8v1h-8zM31 11h8v1h-8zM41 11h8v1h-8zM51 11h4v1h-4zM57 11h8v1h-8zM69 11h5v1h-5zM78 11h2v1h-2zM92 11h1v1h-1zM97 11h1v1h-1zM102 11h4v1h-4zM110 11h5v1h-5zM118 11h4v1h-4zM123 11h3v1h-3z"/></g><path fill="#fff4d6" d="M0 0h4v1h-4zM1 1h2v1h-2zM1 2h2v1h-2zM1 3h2v1h-2zM11 3h8v1h-8zM21 3h4v1h-4zM31 3h8v1h-8zM41 3h4v1h-4zM51 3h4v1h-4zM57 3h4v1h-4zM69 3h5v1h-5zM1 4h2v1h-2zM12 4h2v1h-2zM18 4h1v1h-1zM22 4h2v1h-2zM32 4h2v1h-2zM38 4h1v1h-1zM42 4h2v1h-2zM52 4h2v1h-2zM58 4h2v1h-2zM68 4h2v1h-2zM73 4h2v1h-2zM1 5h2v1h-2zM12 5h2v1h-2zM22 5h2v1h-2zM32 5h2v1h-2zM42 5h2v1h-2zM52 5h2v1h-2zM58 5h2v1h-2zM67 5h2v1h-2zM74 5h2v1h-2zM1 6h2v1h-2zM12 6h2v1h-2zM16 6h1v1h-1zM22 6h2v1h-2zM32 6h2v1h-2zM36 6h1v1h-1zM42 6h2v1h-2zM52 6h2v1h-2zM58 6h2v1h-2zM67 6h2v1h-2zM74 6h2v1h-2zM1 7h2v1h-2zM12 7h5v1h-5zM22 7h2v1h-2zM32 7h5v1h-5zM42 7h2v1h-2zM52 7h2v1h-2zM58 7h2v1h-2zM67 7h2v1h-2zM74 7h2v1h-2zM1 8h2v1h-2zM12 8h2v1h-2zM16 8h1v1h-1zM22 8h2v1h-2zM32 8h2v1h-2zM36 8h1v1h-1zM42 8h2v1h-2zM52 8h2v1h-2zM58 8h2v1h-2zM67 8h2v1h-2zM74 8h2v1h-2zM1 9h2v1h-2zM12 9h2v1h-2zM22 9h2v1h-2zM32 9h2v1h-2zM42 9h2v1h-2zM52 9h2v1h-2zM58 9h2v1h-2zM67 9h2v1h-2zM74 9h2v1h-2zM1 10h2v1h-2zM8 10h1v1h-1zM12 10h2v1h-2zM18 10h1v1h-1zM22 10h2v1h-2zM28 10h1v1h-1zM32 10h2v1h-2zM38 10h1v1h-1zM42 10h2v1h-2zM48 10h1v1h-1zM52 10h2v1h-2zM58 10h2v1h-2zM64 10h1v1h-1zM68 10h2v1h-2zM73 10h2v1h-2zM0 11h9v1h-9zM11 11h8v1h-8zM21 11h8v1h-8zM31 11h8v1h-8zM41 11h8v1h-8zM51 11h4v1h-4zM57 11h8v1h-8zM69 11h5v1h-5z"/><path fill="#ffc94a" d="M79 4h1v1h-1zM78 5h2v1h-2zM78 6h2v1h-2zM79 9h1v1h-1zM78 10h2v1h-2zM78 11h2v1h-2z"/><path fill="#ffc94a" d="M87 0h4v1h-4zM98 0h3v1h-3zM88 1h2v1h-2zM99 1h1v1h-1zM88 2h2v1h-2zM99 2h1v1h-1zM89 3h2v1h-2zM94 3h2v1h-2zM99 3h1v1h-1zM102 3h4v1h-4zM110 3h5v1h-5zM118 3h4v1h-4zM123 3h3v1h-3zM89 4h2v1h-2zM93 4h3v1h-3zM99 4h1v1h-1zM103 4h2v1h-2zM109 4h2v1h-2zM114 4h2v1h-2zM119 4h2v1h-2zM124 4h1v1h-1zM89 5h2v1h-2zM93 5h1v1h-1zM95 5h2v1h-2zM99 5h1v1h-1zM103 5h2v1h-2zM108 5h2v1h-2zM115 5h1v1h-1zM119 5h2v1h-2zM123 5h1v1h-1zM90 6h2v1h-2zM93 6h1v1h-1zM95 6h2v1h-2zM98 6h1v1h-1zM103 6h2v1h-2zM108 6h2v1h-2zM119 6h2v1h-2zM122 6h1v1h-1zM90 7h2v1h-2zM93 7h1v1h-1zM95 7h2v1h-2zM98 7h1v1h-1zM103 7h2v1h-2zM108 7h2v1h-2zM119 7h4v1h-4zM90 8h4v1h-4zM96 8h3v1h-3zM103 8h2v1h-2zM108 8h2v1h-2zM119 8h2v1h-2zM122 8h2v1h-2zM91 9h2v1h-2zM96 9h3v1h-3zM103 9h2v1h-2zM108 9h2v1h-2zM115 9h1v1h-1zM119 9h2v1h-2zM123 9h2v1h-2zM91 10h2v1h-2zM96 10h3v1h-3zM103 10h2v1h-2zM109 10h2v1h-2zM114 10h2v1h-2zM119 10h2v1h-2zM124 10h2v1h-2zM92 11h1v1h-1zM97 11h1v1h-1zM102 11h4v1h-4zM110 11h5v1h-5zM118 11h4v1h-4zM123 11h3v1h-3z"/></g>
+    <g id="wk-title-es"><g transform="translate(0 1)" opacity=".85"><path fill="#1b1006" d="M0 0h4v1h-4zM87 0h3v1h-3zM95 0h3v1h-3zM1 1h2v1h-2zM88 1h2v1h-2zM95 1h2v1h-2zM1 2h2v1h-2zM88 2h3v1h-3zM94 2h3v1h-3zM1 3h2v1h-2zM11 3h8v1h-8zM21 3h4v1h-4zM31 3h8v1h-8zM41 3h4v1h-4zM51 3h4v1h-4zM57 3h4v1h-4zM69 3h5v1h-5zM88 3h2v1h-2zM91 3h1v1h-1zM93 3h1v1h-1zM95 3h2v1h-2zM100 3h8v1h-8zM112 3h5v1h-5zM120 3h4v1h-4zM125 3h4v1h-4zM135 3h1v1h-1zM1 4h2v1h-2zM12 4h2v1h-2zM18 4h1v1h-1zM22 4h2v1h-2zM32 4h2v1h-2zM38 4h1v1h-1zM42 4h2v1h-2zM52 4h2v1h-2zM58 4h2v1h-2zM68 4h2v1h-2zM73 4h2v1h-2zM79 4h1v1h-1zM88 4h2v1h-2zM91 4h1v1h-1zM93 4h1v1h-1zM95 4h2v1h-2zM101 4h2v1h-2zM107 4h1v1h-1zM111 4h2v1h-2zM116 4h2v1h-2zM121 4h2v1h-2zM126 4h2v1h-2zM134 4h3v1h-3zM1 5h2v1h-2zM12 5h2v1h-2zM22 5h2v1h-2zM32 5h2v1h-2zM42 5h2v1h-2zM52 5h2v1h-2zM58 5h2v1h-2zM67 5h2v1h-2zM74 5h2v1h-2zM78 5h2v1h-2zM88 5h2v1h-2zM92 5h1v1h-1zM95 5h2v1h-2zM101 5h2v1h-2zM110 5h2v1h-2zM117 5h1v1h-1zM121 5h2v1h-2zM126 5h2v1h-2zM134 5h1v1h-1zM136 5h2v1h-2zM1 6h2v1h-2zM12 6h2v1h-2zM16 6h1v1h-1zM22 6h2v1h-2zM32 6h2v1h-2zM36 6h1v1h-1zM42 6h2v1h-2zM52 6h2v1h-2zM58 6h2v1h-2zM67 6h2v1h-2zM74 6h2v1h-2zM78 6h2v1h-2zM88 6h2v1h-2zM92 6h1v1h-1zM95 6h2v1h-2zM101 6h2v1h-2zM105 6h1v1h-1zM110 6h2v1h-2zM121 6h2v1h-2zM126 6h2v1h-2zM133 6h1v1h-1zM136 6h2v1h-2zM1 7h2v1h-2zM12 7h5v1h-5zM22 7h2v1h-2zM32 7h5v1h-5zM42 7h2v1h-2zM52 7h2v1h-2zM58 7h2v1h-2zM67 7h2v1h-2zM74 7h2v1h-2zM88 7h2v1h-2zM95 7h2v1h-2zM101 7h5v1h-5zM110 7h2v1h-2zM121 7h7v1h-7zM133 7h1v1h-1zM136 7h2v1h-2zM1 8h2v1h-2zM12 8h2v1h-2zM16 8h1v1h-1zM22 8h2v1h-2zM32 8h2v1h-2zM36 8h1v1h-1zM42 8h2v1h-2zM52 8h2v1h-2zM58 8h2v1h-2zM67 8h2v1h-2zM74 8h2v1h-2zM88 8h2v1h-2zM95 8h2v1h-2zM101 8h2v1h-2zM105 8h1v1h-1zM110 8h2v1h-2zM121 8h2v1h-2zM126 8h2v1h-2zM132 8h7v1h-7zM1 9h2v1h-2zM12 9h2v1h-2zM22 9h2v1h-2zM32 9h2v1h-2zM42 9h2v1h-2zM52 9h2v1h-2zM58 9h2v1h-2zM67 9h2v1h-2zM74 9h2v1h-2zM79 9h1v1h-1zM88 9h2v1h-2zM95 9h2v1h-2zM101 9h2v1h-2zM110 9h2v1h-2zM117 9h1v1h-1zM121 9h2v1h-2zM126 9h2v1h-2zM132 9h1v1h-1zM137 9h2v1h-2zM1 10h2v1h-2zM8 10h1v1h-1zM12 10h2v1h-2zM18 10h1v1h-1zM22 10h2v1h-2zM28 10h1v1h-1zM32 10h2v1h-2zM38 10h1v1h-1zM42 10h2v1h-2zM48 10h1v1h-1zM52 10h2v1h-2zM58 10h2v1h-2zM64 10h1v1h-1zM68 10h2v1h-2zM73 10h2v1h-2zM78 10h2v1h-2zM88 10h2v1h-2zM95 10h2v1h-2zM101 10h2v1h-2zM107 10h1v1h-1zM111 10h2v1h-2zM116 10h2v1h-2zM121 10h2v1h-2zM126 10h2v1h-2zM132 10h1v1h-1zM137 10h2v1h-2zM0 11h9v1h-9zM11 11h8v1h-8zM21 11h8v1h-8zM31 11h8v1h-8zM41 11h8v1h-8zM51 11h4v1h-4zM57 11h8v1h-8zM69 11h5v1h-5zM78 11h2v1h-2zM87 11h4v1h-4zM94 11h4v1h-4zM100 11h8v1h-8zM112 11h5v1h-5zM120 11h4v1h-4zM125 11h4v1h-4zM131 11h3v1h-3zM136 11h4v1h-4z"/></g><path fill="#fff4d6" d="M0 0h4v1h-4zM1 1h2v1h-2zM1 2h2v1h-2zM1 3h2v1h-2zM11 3h8v1h-8zM21 3h4v1h-4zM31 3h8v1h-8zM41 3h4v1h-4zM51 3h4v1h-4zM57 3h4v1h-4zM69 3h5v1h-5zM1 4h2v1h-2zM12 4h2v1h-2zM18 4h1v1h-1zM22 4h2v1h-2zM32 4h2v1h-2zM38 4h1v1h-1zM42 4h2v1h-2zM52 4h2v1h-2zM58 4h2v1h-2zM68 4h2v1h-2zM73 4h2v1h-2zM1 5h2v1h-2zM12 5h2v1h-2zM22 5h2v1h-2zM32 5h2v1h-2zM42 5h2v1h-2zM52 5h2v1h-2zM58 5h2v1h-2zM67 5h2v1h-2zM74 5h2v1h-2zM1 6h2v1h-2zM12 6h2v1h-2zM16 6h1v1h-1zM22 6h2v1h-2zM32 6h2v1h-2zM36 6h1v1h-1zM42 6h2v1h-2zM52 6h2v1h-2zM58 6h2v1h-2zM67 6h2v1h-2zM74 6h2v1h-2zM1 7h2v1h-2zM12 7h5v1h-5zM22 7h2v1h-2zM32 7h5v1h-5zM42 7h2v1h-2zM52 7h2v1h-2zM58 7h2v1h-2zM67 7h2v1h-2zM74 7h2v1h-2zM1 8h2v1h-2zM12 8h2v1h-2zM16 8h1v1h-1zM22 8h2v1h-2zM32 8h2v1h-2zM36 8h1v1h-1zM42 8h2v1h-2zM52 8h2v1h-2zM58 8h2v1h-2zM67 8h2v1h-2zM74 8h2v1h-2zM1 9h2v1h-2zM12 9h2v1h-2zM22 9h2v1h-2zM32 9h2v1h-2zM42 9h2v1h-2zM52 9h2v1h-2zM58 9h2v1h-2zM67 9h2v1h-2zM74 9h2v1h-2zM1 10h2v1h-2zM8 10h1v1h-1zM12 10h2v1h-2zM18 10h1v1h-1zM22 10h2v1h-2zM28 10h1v1h-1zM32 10h2v1h-2zM38 10h1v1h-1zM42 10h2v1h-2zM48 10h1v1h-1zM52 10h2v1h-2zM58 10h2v1h-2zM64 10h1v1h-1zM68 10h2v1h-2zM73 10h2v1h-2zM0 11h9v1h-9zM11 11h8v1h-8zM21 11h8v1h-8zM31 11h8v1h-8zM41 11h8v1h-8zM51 11h4v1h-4zM57 11h8v1h-8zM69 11h5v1h-5z"/><path fill="#ffc94a" d="M79 4h1v1h-1zM78 5h2v1h-2zM78 6h2v1h-2zM79 9h1v1h-1zM78 10h2v1h-2zM78 11h2v1h-2z"/><path fill="#ffc94a" d="M87 0h3v1h-3zM95 0h3v1h-3zM88 1h2v1h-2zM95 1h2v1h-2zM88 2h3v1h-3zM94 2h3v1h-3zM88 3h2v1h-2zM91 3h1v1h-1zM93 3h1v1h-1zM95 3h2v1h-2zM100 3h8v1h-8zM112 3h5v1h-5zM120 3h4v1h-4zM125 3h4v1h-4zM135 3h1v1h-1zM88 4h2v1h-2zM91 4h1v1h-1zM93 4h1v1h-1zM95 4h2v1h-2zM101 4h2v1h-2zM107 4h1v1h-1zM111 4h2v1h-2zM116 4h2v1h-2zM121 4h2v1h-2zM126 4h2v1h-2zM134 4h3v1h-3zM88 5h2v1h-2zM92 5h1v1h-1zM95 5h2v1h-2zM101 5h2v1h-2zM110 5h2v1h-2zM117 5h1v1h-1zM121 5h2v1h-2zM126 5h2v1h-2zM134 5h1v1h-1zM136 5h2v1h-2zM88 6h2v1h-2zM92 6h1v1h-1zM95 6h2v1h-2zM101 6h2v1h-2zM105 6h1v1h-1zM110 6h2v1h-2zM121 6h2v1h-2zM126 6h2v1h-2zM133 6h1v1h-1zM136 6h2v1h-2zM88 7h2v1h-2zM95 7h2v1h-2zM101 7h5v1h-5zM110 7h2v1h-2zM121 7h7v1h-7zM133 7h1v1h-1zM136 7h2v1h-2zM88 8h2v1h-2zM95 8h2v1h-2zM101 8h2v1h-2zM105 8h1v1h-1zM110 8h2v1h-2zM121 8h2v1h-2zM126 8h2v1h-2zM132 8h7v1h-7zM88 9h2v1h-2zM95 9h2v1h-2zM101 9h2v1h-2zM110 9h2v1h-2zM117 9h1v1h-1zM121 9h2v1h-2zM126 9h2v1h-2zM132 9h1v1h-1zM137 9h2v1h-2zM88 10h2v1h-2zM95 10h2v1h-2zM101 10h2v1h-2zM107 10h1v1h-1zM111 10h2v1h-2zM116 10h2v1h-2zM121 10h2v1h-2zM126 10h2v1h-2zM132 10h1v1h-1zM137 10h2v1h-2zM87 11h4v1h-4zM94 11h4v1h-4zM100 11h8v1h-8zM112 11h5v1h-5zM120 11h4v1h-4zM125 11h4v1h-4zM131 11h3v1h-3zM136 11h4v1h-4z"/></g>
+  </defs>
+</svg>
+<!-- /page-art -->
+<!-- The Lelelilo-Studios intro, first, over the download: any press after it has had its moment skips it, and
+     nothing pressed during it reaches the game -->
+<script src="lelelilo-intro/lelelilo-intro.js"></script>
+<script>
+  (function () {
+    // Browsers start sound only after a tap or a key: the game's AudioContext (window.__lelelilo_audio) is resumed on
+    // the first one. The intro keeps presses to itself, so it passes them on here.
+    window.__lelelilo_unlock = () => { const a = window.__lelelilo_audio; if (a && a.state !== 'running' && !document.hidden) a.resume().catch(() => {}); };
+    // The screen's safe area (notches, rounded corners, the home bar) in CSS pixels, for the game's layout: kept up to
+    // date as the phone turns. (?safe=l,r,t,b pretends to be a phone with those, to try a layout on a computer.)
+    const fake = (new URLSearchParams(location.search).get('safe') || '').split(',').map(Number);
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;' +
+      'padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+    document.documentElement.appendChild(probe);
+    const measure = () => {
+      if (fake.length === 4 && fake.every(n => n >= 0)) { window.__lelelilo_safe = { l: fake[0], r: fake[1], t: fake[2], b: fake[3] }; return; }
+      const s = getComputedStyle(probe), px = v => parseFloat(v) || 0;
+      window.__lelelilo_safe = { l: px(s.paddingLeft), r: px(s.paddingRight), t: px(s.paddingTop), b: px(s.paddingBottom) };
+    };
+    // (a phone reports its new insets a moment after it says it turned)
+    const soon = () => { measure(); requestAnimationFrame(measure); setTimeout(measure, 250); setTimeout(measure, 700); };
+    measure();
+    addEventListener('resize', soon); addEventListener('orientationchange', soon);
+    if (window.visualViewport) visualViewport.addEventListener('resize', soon);
+    if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', soon);
+    // The game says when its first frame is up (or that it can't start): the intro then makes way
+    let ready;
+    const gameReady = new Promise(r => { ready = r; });
+    window.__lelelilo_game_ready = () => ready();
+    // (a capture or a check from outside draws the game as it is, with no intro)
+    if (/[?&](capture|check)\b/.test(location.search) || !window.LeleliloIntro) { window.__lelelilo_intro_done = Promise.resolve(); return; }
+    // The game waits, silent, until the intro is over
+    window.__lelelilo_held = true;
+    // Its sound follows the game's: off when the game's sounds were switched off
+    let sound = true;
+    try { sound = localStorage.getItem('lelelilo_wick_sound') !== 'off'; } catch (e) {}
+    // The intro leaves when it is over, ready or not: on a slow phone the loading screen (on the same midnight)
+    // then shows the wick catching as the game arrives, instead of a flat screen
+    window.__lelelilo_intro_done = LeleliloIntro.play({ base: 'lelelilo-intro/', until: Promise.resolve(), sound, onGesture: window.__lelelilo_unlock });
+    window.__lelelilo_intro_done.then(() => { window.__lelelilo_held = false; });
+  })();
+</script>
+<canvas id="lelelilo" tabindex="0" aria-label="Lelelilo: Wick"></canvas>
+
+<div class="screen" id="loading">
+  <div class="inner">
+    <svg class="scene" id="scene" viewBox="-7 -16 39 45" shape-rendering="crispEdges" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-t-label="loading">
+      <defs>
+        <radialGradient id="wk-glow"><stop offset="0" stop-color="#ffc94a" stop-opacity=".5"/><stop offset=".12" stop-color="#ffc94a" stop-opacity=".3"/><stop offset=".3" stop-color="#ffc94a" stop-opacity=".12"/><stop offset=".55" stop-color="#e3b563" stop-opacity=".045"/><stop offset=".8" stop-color="#e3b563" stop-opacity=".012"/><stop offset="1" stop-color="#e3b563" stop-opacity="0"/></radialGradient>
+      </defs>
+      <circle class="glow" cx="12.5" cy="-2" r="46" fill="url(#wk-glow)" shape-rendering="auto"/>
+      <path d="M3 28h19v1h-19z" fill="#03060d" opacity=".9"/>
+      <use href="#wk-pillow"/>
+      <use class="shut" href="#wk-eyes-shut"/><use class="open" href="#wk-eyes-open"/>
+      <use class="dark" href="#wk-dark"/>
+      <use class="tip-cold" href="#wk-tip-cold"/><use class="tip-lit" href="#wk-tip-lit"/>
+      <g class="flame f0"><use class="a" href="#wk-f0a"/><use class="b" href="#wk-f0b"/><use class="c" href="#wk-f0c"/></g>
+      <g class="flame f1"><use class="a" href="#wk-f1a"/><use class="b" href="#wk-f1b"/><use class="c" href="#wk-f1c"/></g>
+      <g class="flame f2"><use class="a" href="#wk-f2a"/><use class="b" href="#wk-f2b"/><use class="c" href="#wk-f2c"/></g>
+      <g class="flame f3"><use class="a" href="#wk-f3a"/><use class="b" href="#wk-f3b"/><use class="c" href="#wk-f3c"/></g>
+      <g class="match"><use href="#wk-match"/><use class="mflame" href="#wk-match-flame"/></g>
+      <use class="spark one" href="#wk-spark"/><use class="spark two" href="#wk-spark"/><use class="spark three" href="#wk-spark"/>
+      <use class="smoke one" href="#wk-smoke"/><use class="smoke two" href="#wk-smoke"/>
+      <g class="moth"><g class="path"><use class="up" href="#wk-moth-a"/><use class="down" href="#wk-moth-b"/></g></g>
+    </svg>
+    <!-- title --><svg class="title" lang="en" viewBox="0 0 126 13" style="--w:126;--h:13" shape-rendering="crispEdges" role="img" aria-label="Lelelilo: Wick"><use href="#wk-title-en"/></svg><svg class="title" lang="es" viewBox="0 0 140 13" style="--w:140;--h:13" shape-rendering="crispEdges" role="img" aria-label="Lelelilo: Mecha"><use href="#wk-title-es"/></svg><!-- /title -->
+    <div class="status" id="status" role="status" aria-live="polite" data-t="lighting">Lighting the wick…</div>
+  </div>
+  <a class="studio" href="https://lelelilo.com/?ref=lelelilo-wick" target="_blank" rel="noopener">lelelilo<span>.com</span></a>
+</div>
+
+<div class="screen hidden" id="unsupported">
+  <div class="inner">
+    <svg class="mini" viewBox="-7 -4 39 33" shape-rendering="crispEdges" aria-hidden="true">
+      <use href="#wk-pillow"/><use href="#wk-eyes-shut"/><use class="dark" href="#wk-dark"/><use href="#wk-tip-cold"/>
+    </svg>
+    <!-- title --><svg class="title" lang="en" viewBox="0 0 126 13" style="--w:126;--h:13" shape-rendering="crispEdges" role="img" aria-label="Lelelilo: Wick"><use href="#wk-title-en"/></svg><svg class="title" lang="es" viewBox="0 0 140 13" style="--w:140;--h:13" shape-rendering="crispEdges" role="img" aria-label="Lelelilo: Mecha"><use href="#wk-title-es"/></svg><!-- /title -->
+    <h1 data-t="unsupported_title">This browser can't light the wick</h1>
+    <p data-t="unsupported_body">Lelelilo: Wick needs <b>WebGPU</b>, which this browser doesn't offer yet. It plays in these:</p>
+    <div class="browsers">
+      <a href="https://www.google.com/chrome/" rel="noopener" data-t="chrome">Chrome <small>· computers &amp; Android</small></a>
+      <a href="https://www.microsoft.com/edge" rel="noopener" data-t="edge">Edge <small>· computers &amp; Android</small></a>
+      <a href="https://www.apple.com/safari/" rel="noopener" data-t="safari">Safari 26+ <small>· iPhone, iPad &amp; Mac</small></a>
+    </div>
+    <div class="help hidden" id="linux-help"></div>
+    <p id="why" class="why"></p>
+  </div>
+  <a class="studio" href="https://lelelilo.com/?ref=lelelilo-wick" target="_blank" rel="noopener">lelelilo<span>.com</span></a>
+</div>
+
+<div class="screen hidden" id="failed">
+  <div class="inner">
+    <svg class="mini" viewBox="-7 -4 39 33" shape-rendering="crispEdges" aria-hidden="true">
+      <use href="#wk-pillow"/><use href="#wk-eyes-shut"/><use class="dark" href="#wk-dark"/><use href="#wk-tip-lit"/>
+      <use class="smoke one" href="#wk-smoke"/><use class="smoke two" href="#wk-smoke"/>
+    </svg>
+    <!-- title --><svg class="title" lang="en" viewBox="0 0 126 13" style="--w:126;--h:13" shape-rendering="crispEdges" role="img" aria-label="Lelelilo: Wick"><use href="#wk-title-en"/></svg><svg class="title" lang="es" viewBox="0 0 140 13" style="--w:140;--h:13" shape-rendering="crispEdges" role="img" aria-label="Lelelilo: Mecha"><use href="#wk-title-es"/></svg><!-- /title -->
+    <h1 data-t="failed_title">The wick went out</h1>
+    <p data-t="failed_body">Something went wrong while starting the game. Starting it again usually helps.</p>
+    <a class="again" href="." id="again" data-t="again">Try again</a>
+    <div class="err" id="errtext"></div>
+  </div>
+  <a class="studio" href="https://lelelilo.com/?ref=lelelilo-wick" target="_blank" rel="noopener">lelelilo<span>.com</span></a>
+</div>
+
+<script>
+  // Every word of the screens before the game, in both languages (British English; Latin American Spanish with tú)
+  window.__lelelilo_text = {
+    en: {
+      loading: 'Loading', lighting: 'Lighting the wick…', catching: 'The wick catches…', ready: 'Ready',
+      unsupported_title: 'This browser can’t light the wick',
+      unsupported_body: 'Lelelilo: Wick needs <b>WebGPU</b>, which this browser doesn’t offer yet. It plays in these:',
+      chrome: 'Chrome <small>· computers &amp; Android</small>', edge: 'Edge <small>· computers &amp; Android</small>',
+      safari: 'Safari 26+ <small>· iPhone, iPad &amp; Mac</small>',
+      linux: `<b>On Linux</b>, WebGPU is still switched off by default. In Chrome, Chromium, Brave or Edge:
+        <ol><li>Open <code>chrome://flags</code> and set <b>Unsafe WebGPU Support</b> to Enabled,</li>
+        <li><b>Vulkan</b> to Enabled,</li><li><b>Preferred Ozone platform</b> to X11,</li><li>then relaunch the browser.</li></ol>`,
+      no_gpu: 'This browser has no WebGPU.', no_adapter: 'WebGPU is here, but it found no graphics card it can use.',
+      gpu_failed: 'WebGPU could not start: ',
+      failed_title: 'The wick went out', failed_body: 'Something went wrong while starting the game. Starting it again usually helps.',
+      again: 'Try again', download_failed: 'Could not download the game',
+    },
+    es: {
+      loading: 'Cargando', lighting: 'Encendiendo la mecha…', catching: 'La mecha prende…', ready: 'Listo',
+      unsupported_title: 'Este navegador no puede encender la mecha',
+      unsupported_body: 'Lelelilo: Mecha necesita <b>WebGPU</b>, y este navegador todavía no lo tiene. Funciona en estos:',
+      chrome: 'Chrome <small>· computadoras y Android</small>', edge: 'Edge <small>· computadoras y Android</small>',
+      safari: 'Safari 26+ <small>· iPhone, iPad y Mac</small>',
+      linux: `<b>En Linux</b>, WebGPU todavía viene desactivado. En Chrome, Chromium, Brave o Edge:
+        <ol><li>Abre <code>chrome://flags</code> y pon <b>Unsafe WebGPU Support</b> en Enabled,</li>
+        <li><b>Vulkan</b> en Enabled,</li><li><b>Preferred Ozone platform</b> en X11,</li><li>y vuelve a abrir el navegador.</li></ol>`,
+      no_gpu: 'Este navegador no tiene WebGPU.', no_adapter: 'WebGPU está, pero no encontró una tarjeta gráfica que pueda usar.',
+      gpu_failed: 'WebGPU no pudo arrancar: ',
+      failed_title: 'La mecha se apagó', failed_body: 'Algo salió mal al iniciar el juego. Volver a intentarlo suele funcionar.',
+      again: 'Intentar de nuevo', download_failed: 'No se pudo descargar el juego',
+    },
+  }[window.__lelelilo_lang];
+  for (const el of document.querySelectorAll('[data-t]')) el.innerHTML = window.__lelelilo_text[el.dataset.t];
+  for (const el of document.querySelectorAll('[data-t-label]')) el.setAttribute('aria-label', window.__lelelilo_text[el.dataset.tLabel]);
+  document.getElementById('lelelilo').setAttribute('aria-label', document.title);
+</script>
+
+<script type="module">
+  // `cargo xtask web` writes the build's id here, so a browser fetches the new game after each build
+  const BUILD = '5a6386a';
+  window.__lelelilo_build = BUILD;
+  const q = new URLSearchParams(location.search);
+  const T = window.__lelelilo_text;
+  const $ = id => document.getElementById(id);
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Sound starts with the first tap or key, and stops while the page is hidden (another tab, a phone's home screen)
+  const unlockAudio = window.__lelelilo_unlock;
+  for (const ev of ['pointerdown', 'keydown', 'touchend']) addEventListener(ev, unlockAudio, { capture: true });
+  // (presses during the studio intro are its own: once it is over, the game's sound starts if the page was pressed)
+  window.__lelelilo_intro_done.then(() => { if (navigator.userActivation?.hasBeenActive) unlockAudio(); });
+  document.addEventListener('visibilitychange', () => {
+    const a = window.__lelelilo_audio; if (!a) return;
+    if (document.hidden) a.suspend().catch(() => {}); else if (navigator.userActivation?.hasBeenActive) a.resume().catch(() => {});
+  });
+
+  // Fingers belong to the game: no pinch-zoom of the page (iOS ignores user-scalable), no long-press menu
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  $('lelelilo').addEventListener('contextmenu', e => e.preventDefault());
+
+  const show = id => { for (const s of ['loading', 'unsupported', 'failed']) $(s).classList.toggle('hidden', s !== id); };
+
+  // ── The loading screen: the wick catches from a match, then its flame grows with the download ──
+  const scene = $('scene');
+  let k = 0, lit = reduced, awake = false;
+  function draw() {
+    const stage = !lit ? -1 : k >= 0.8 ? 3 : k >= 0.5 ? 2 : k >= 0.2 ? 1 : 0;
+    scene.style.setProperty('--k', (lit ? k : 0).toFixed(3));
+    scene.classList.toggle('lit', lit);
+    scene.classList.toggle('awake', awake);
+    for (let s = 0; s < 4; s++) scene.classList.toggle(`s${s}`, s === stage);
+    scene.setAttribute('aria-valuenow', String(Math.round(k * 100)));
+  }
+  // (the flame only ever grows)
+  const setProgress = v => { k = Math.max(k, Math.max(0, Math.min(1, v))); draw(); };
+  // The match reaches the wick 1.35 s in (the .match animation)
+  if (!lit) setTimeout(() => { lit = true; draw(); }, 1350);
+  draw();
+
+  const fail = e => { console.error(e); $('errtext').textContent = String(e && e.message || e); show('failed'); window.__lelelilo_game_ready(); };
+  $('again').addEventListener('click', e => { e.preventDefault(); location.reload(); });
+  const LINUX = /Linux/.test(navigator.userAgent) && !/Android/.test(navigator.userAgent);
+
+  // WebGPU or nothing: there is no WebGL version of the game to fall back to. (?nogpu pretends there is none, to see
+  // the screen that says so.)
+  async function hasWebGPU() {
+    if (!navigator.gpu || q.has('nogpu')) return T.no_gpu;
+    try { const a = await navigator.gpu.requestAdapter(); return a ? null : T.no_adapter; }
+    catch (e) { return T.gpu_failed + e.message; }
+  }
+
+  // Download the game with progress (the flame grows as the bytes arrive)
+  async function fetchWasm(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${T.download_failed} (${res.status})`);
+    const total = +res.headers.get('content-length') || 0, reader = res.body.getReader(), parts = [];
+    let got = 0;
+    for (;;) {
+      const { done, value } = await reader.read(); if (done) break;
+      parts.push(value); got += value.length;
+      // (with no size given, or a compressed size smaller than what arrives, it comes ever closer without arriving)
+      setProgress(0.9 * (total && got <= total ? got / total : 1 - Math.exp(-got / 1.2e6)));
+    }
+    return new Response(new Blob(parts), { headers: { 'Content-Type': 'application/wasm' } });
+  }
+
+  // ── Phones: on the first tap in the game, the whole screen, held sideways (an iPhone offers neither; failures are
+  // fine). What came of it is left in __lelelilo_sideways. ──
+  async function sideways() {
+    const out = [], root = document.documentElement;
+    try {
+      const app = matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches;
+      const ask = root.requestFullscreen ? () => root.requestFullscreen({ navigationUI: 'hide' }) : root.webkitRequestFullscreen ? () => root.webkitRequestFullscreen() : null;
+      if (!app && ask && !(document.fullscreenElement || document.webkitFullscreenElement)) { await ask(); out.push('fullscreen'); }
+    } catch (e) { out.push('no fullscreen'); }
+    try { await screen.orientation.lock('landscape'); out.push('locked sideways'); } catch (e) { out.push('not locked'); }
+    window.__lelelilo_sideways = out.join(', ');
+  }
+  function armSideways() {
+    if (!matchMedia('(pointer: coarse)').matches) return;
+    const once = () => { removeEventListener('pointerup', once, true); removeEventListener('touchend', once, true); sideways(); };
+    addEventListener('pointerup', once, true); addEventListener('touchend', once, true);
+  }
+
+  // ── Offline: once the game has started, a service worker keeps this build for next time (only over https or on
+  // this computer, and not for checks from outside). It says when this build is kept: __lelelilo_offline and a
+  // lelelilo-offline-ready event, for the game's "Ready to play offline". ──
+  function keepForOffline() {
+    if (!('serviceWorker' in navigator) || q.has('capture') || q.has('check')) return;
+    if (location.protocol !== 'https:' && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
+    const mine = w => w && new URL(w.scriptURL).searchParams.get('v') === BUILD;
+    const kept = () => { if (window.__lelelilo_offline) return; window.__lelelilo_offline = true; dispatchEvent(new Event('lelelilo-offline-ready')); };
+    const watch = w => { if (!w) return; if (w.state === 'activated') kept(); else w.addEventListener('statechange', () => { if (w.state === 'activated') kept(); }); };
+    navigator.serviceWorker.register(`sw.js?v=${encodeURIComponent(BUILD)}`, { scope: './' }).then(reg => {
+      if (mine(reg.active)) kept(); else watch([reg.installing, reg.waiting].find(mine));
+      reg.addEventListener('updatefound', () => { if (mine(reg.installing)) watch(reg.installing); });
+    }).catch(e => console.warn('no offline play:', e.message));
+  }
+
+  (async () => {
+    const why = await hasWebGPU();
+    if (why) {
+      $('why').textContent = why;
+      if (LINUX) { $('linux-help').innerHTML = T.linux; $('linux-help').classList.remove('hidden'); }
+      show('unsupported'); window.__lelelilo_game_ready(); return;
+    }
+    try {
+      // The game says when its first frame is up, or that it could not start
+      addEventListener('lelelilo-error', e => fail(e.detail));
+      addEventListener('lelelilo-ready', () => {
+        lit = true; awake = true; setProgress(1); $('status').textContent = T.ready;
+        // (under the studio intro nobody has seen this screen: it goes at once, so that the game is what the intro
+        // makes way for; seen, it is given a moment for the pillow to open its eyes, and fades)
+        if (window.__lelelilo_held) $('loading').classList.add('gone', 'hidden'); else setTimeout(() => $('loading').classList.add('gone'), reduced ? 150 : 450);
+        $('lelelilo').focus();
+        window.__lelelilo_game_ready();
+        window.__lelelilo_intro_done.then(armSideways);
+        // (after the game's own downloads have had a head start)
+        setTimeout(keepForOffline, 3000);
+      }, { once: true });
+      window.__lelelilo_intro_done.then(() => $('lelelilo').focus());
+      const [{ default: init }, wasm] = await Promise.all([import(`./pkg/wick.js?v=${BUILD}`), fetchWasm(`./pkg/wick_bg.wasm?v=${BUILD}`)]);
+      setProgress(0.9); $('status').textContent = T.catching;
+      await init({ module_or_path: wasm });
+    } catch (e) { fail(e); }
+  })();
+</script>
+</body>
+</html>
